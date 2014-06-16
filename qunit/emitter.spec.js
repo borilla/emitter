@@ -42,6 +42,8 @@
 		emitter.on('event', listener1);
 		emitter.trigger('event');
 		ok(listener1.calledOnce, 'Listener was called once');
+		emitter.trigger('event');
+		ok(listener1.calledTwice, 'Listener was called again');
 	});
 
 	test('should not fail if we trigger an event with no listeners', function() {
@@ -96,5 +98,21 @@
 		emitter.trigger('event2');
 		ok(listener1.notCalled, 'Listener1 was not called');
 		ok(listener2.notCalled, 'Listener2 was not called');
+	});
+
+	test('should be able to add a listener to fire only once', function() {
+		emitter.on('event', listener1);
+		emitter.once('event', listener2);
+		emitter.trigger('event');
+		emitter.trigger('event');
+		ok(listener1.calledTwice, 'Listener1 was called twice');
+		ok(listener2.calledOnce, 'Listener2 was called only once');
+	});
+
+	test('should be able to remove a one-time listener', function() {
+		emitter.once('event', listener1);
+		emitter.off('event', listener1);
+		emitter.trigger('event');
+		ok(listener1.notCalled, 'Listener1 was not called');
 	});
 }());

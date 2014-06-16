@@ -40,5 +40,13 @@ var Emitter = (function() {
 		}
 	}
 
+	Emitter.prototype.once = function(event, listener) {
+		var self = this;
+		this.on(event, listener);
+		this.on(event, function() {
+			self.off(event, listener);
+		});
+	}
+
 	return Emitter;
 }());
