@@ -4,15 +4,14 @@ var Emitter = (function() {
 		this._events = {};
 	}
 
-	Emitter.prototype.on = function(event, listener) {
-		var listeners = this._events[event] || (this._events[event] = []);
-		listeners.push(listener);
+	Emitter.prototype.on = function(event, callback) {
+		var listener = {
+			callback: callback
+		};
+		addListener(this._events, event, listener);
 	}
 
-	var slice = Array.prototype.slice;
-
-
-	Emitter.prototype.off = function(event, listener) {
+	Emitter.prototype.off = function(event, callback) {
 		var events = this._events;
 		var listeners;
 		if (!event) {
@@ -21,8 +20,8 @@ var Emitter = (function() {
 		else {
 			var listeners = events[event];
 			if (listeners) {
-				if (listener) {
-					removeListener(listeners, listener);
+				if (callback) {
+					removeListener(listeners, callback);
 				}
 				else {
 					removeEvent(listeners);
@@ -30,6 +29,8 @@ var Emitter = (function() {
 			}
 		}
 	}
+
+	var slice = Array.prototype.slice;
 
 	Emitter.prototype.trigger = function(event) {
 		var events = this._events;
@@ -39,17 +40,29 @@ var Emitter = (function() {
 			var args = slice.call(arguments, 1);
 			for (var i = 0, l = listeners.length; i < l; ++i) {
 				var listener = listeners[i];
-				listener && listener.apply(null, args);
+				if (listener) {
+					listener.callback.apply(null, args);
+					listener.callCount++;
+					if (listener.callCount == listener.maxCalls) {
+						removeListener(listeners, listener.callback);
+					}
+				}
 			}
 		}
 	}
 
-	Emitter.prototype.once = function(event, listener) {
-		var self = this;
-		this.on(event, listener);
-		this.on(event, function() {
-			self.off(event, listener);
-		});
+	Emitter.prototype.once = function(event, callback) {
+		var listener = {
+			callback: callback,
+			maxCalls: 1
+		};
+		addListener(this._events, event, listener);
+	}
+
+	function addListener(events, event, listener) {
+		var listeners = events[event] || (events[event] = []);
+		listener.callCount = listener.callCount || 0;
+		listeners.push(listener);
 	}
 
 	function removeAllEvents(events) {
@@ -66,11 +79,14 @@ var Emitter = (function() {
 		listeners._requiresCompact = true;
 	}
 
-	function removeListener(listeners, listener) {
-		var i = listeners.indexOf(listener);
-		if (i != -1) {
-			listeners[i] = undefined;
-			listeners._requiresCompact = true;
+	function removeListener(listeners, callback) {
+		for (var i = 0, l = listeners.length; i < l; ++i) {
+			var listener = listeners[i];
+			if (listener && listener.callback == callback) {
+				listeners[i] = undefined;
+				listeners._requiresCompact = true;
+				return;
+			}
 		}
 	}
 
