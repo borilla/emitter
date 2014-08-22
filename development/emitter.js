@@ -5,7 +5,7 @@ var Emitter = (function() {
 	}
 
 	Emitter.prototype.on = function(event, callback) {
-		var listener = {
+		var listener = callback.callback ? callback : {
 			callback: callback
 		};
 		addListener(this._events, event, listener);

@@ -135,8 +135,17 @@
 		equal(listener1.callCount, 2, 'listener should have been called twice');
 		emitter.trigger('event');
 		equal(listener1.callCount, 3, 'listener should have been called three times');
+	});
+
+	test('*can* add a listener with a custom "maxCalls" value', function() {
+		emitter.on('event', {
+			callback: listener1,
+			maxCalls: 2
+		});
 		emitter.trigger('event');
-		equal(listener1.callCount, 4, 'listener should have been called four times');
+		emitter.trigger('event');
+		emitter.trigger('event');
+		equal(listener1.callCount, 2, 'listener should only have been called twice');
 	});
 }());
 
