@@ -1,36 +1,29 @@
 (function() {
 	module('Emitter');
 
-	QUnit.testStart(function() {
-	});
-
-	QUnit.testDone(function() {
-	});
-
 	test('should exist and be a function', function() {
 		equal(typeof(Emitter), 'function', 'Emitter is a function');
 	});
 
-	test('should create an instance of en emitter', function() {
+	test('should create an instance of an emitter', function() {
 		var emitter = new Emitter();
-		ok(emitter instanceof Emitter, 'Object is an instance of Emitter');
+		ok(emitter instanceof Emitter, 'emitter is an instance of Emitter');
 	});
 }());
 
 (function() {
-	module('Emitter instance');
-
 	var emitter;
 	var listener1, listener2, listener3;
 
-	QUnit.testStart(function() {
-		emitter = new Emitter();
-		listener1 = sinon.stub();
-		listener2 = sinon.stub();
-		listener3 = sinon.stub();
-	});
-
-	QUnit.testDone(function() {
+	module('Emitter instance', {
+		setup: function() {
+			emitter = new Emitter();
+			listener1 = sinon.stub();
+			listener2 = sinon.stub();
+			listener3 = sinon.stub();
+		},
+		teardown: function() {
+		}
 	});
 
 	test('should be able to add a listener to an event', function() {
@@ -124,8 +117,24 @@
 		emitter.trigger('event');
 		ok(listener1.notCalled, 'Listener1 was not called');
 	});
+}());
 
-	test('a listener should be able to remove itself', function() {
+(function() {
+	var emitter;
+	var listener1, listener2, listener3;
+
+	module('Event listener', {
+		setup: function() {
+			emitter = new Emitter();
+			listener1 = sinon.stub();
+			listener2 = sinon.stub();
+			listener3 = sinon.stub();
+		},
+		teardown: function() {
+		}
+	});
+
+	test('should be able to remove itself', function() {
 		listener2 = sinon.spy(function() {
 			emitter.off('event', listener2);
 		});
@@ -142,7 +151,7 @@
 		ok(listener3.calledTwice, 'Listener3 was called again');
 	});
 
-	test('a listener should be able to remove a later listener to the same event', function() {
+	test('should be able to remove a later listener to the same event', function() {
 		listener1 = sinon.spy(function() {
 			emitter.off('event', listener2);
 		});
@@ -155,7 +164,7 @@
 		ok(listener3.calledOnce, 'Listener3 was called once');
 	});
 
-	test('a listener should be able to remove an earlier listener to the same event', function() {
+	test('should be able to remove an earlier listener to the same event', function() {
 		listener2 = sinon.spy(function() {
 			emitter.off('event', listener1);
 		});
@@ -166,5 +175,39 @@
 		ok(listener1.calledOnce, 'Listener1 was called once');
 		ok(listener2.calledOnce, 'Listener2 was called once');
 		ok(listener3.calledOnce, 'Listener3 was called once');
+	});
+
+	test('should be able to remove all listeners to its own event', function() {
+		listener2 = sinon.spy(function() {
+			emitter.off('event');
+		});
+		emitter.on('event', listener1);
+		emitter.on('event', listener2);
+		emitter.on('event', listener3);
+		emitter.trigger('event');
+		ok(listener1.calledOnce, 'Listener1 was called once');
+		ok(listener2.calledOnce, 'Listener2 was called once');
+		ok(listener3.notCalled, 'Listener3 was not called');
+		emitter.trigger('event');
+		ok(listener1.calledOnce, 'Listener1 was not called again');
+		ok(listener2.calledOnce, 'Listener2 was not called again');
+		ok(listener3.notCalled, 'Listener3 was still not called');
+	});
+
+	test('should be able to remove all listeners to all events', function() {
+		listener2 = sinon.spy(function() {
+			emitter.off();
+		});
+		emitter.on('event', listener1);
+		emitter.on('event', listener2);
+		emitter.on('event', listener3);
+		emitter.trigger('event');
+		ok(listener1.calledOnce, 'Listener1 was called once');
+		ok(listener2.calledOnce, 'Listener2 was called once');
+		ok(listener3.notCalled, 'Listener3 was not called');
+		emitter.trigger('event');
+		ok(listener1.calledOnce, 'Listener1 was not called again');
+		ok(listener2.calledOnce, 'Listener2 was not called again');
+		ok(listener3.notCalled, 'Listener3 was still not called');
 	});
 }());
