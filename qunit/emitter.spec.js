@@ -118,7 +118,7 @@
 		ok(listener1.notCalled, 'Listener1 was not called');
 	});
 
-	test('should not remove both items when same callback is added as both one-time and multiple-time listener', function() {
+	test('should remove correct item when same callback is added as one-time then multiple-time listener', function() {
 		emitter.once('event', listener1);
 		emitter.on('event', listener1);
 		emitter.off('event', listener1);
@@ -126,6 +126,17 @@
 		equal(listener1.callCount, 1, 'listener should have been called once');
 		emitter.trigger('event');
 		equal(listener1.callCount, 2, 'listener should have been called twice');
+	});
+
+	test('should remove correct item when same callback is added as multiple-time then one-time listener', function() {
+		emitter.on('event', listener1);
+		emitter.once('event', listener1);
+		emitter.trigger('event');
+		equal(listener1.callCount, 2, 'listener should have been called twice');
+		emitter.trigger('event');
+		equal(listener1.callCount, 3, 'listener should have been called three times');
+		emitter.trigger('event');
+		equal(listener1.callCount, 4, 'listener should have been called four times');
 	});
 }());
 

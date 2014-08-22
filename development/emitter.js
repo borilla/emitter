@@ -21,7 +21,7 @@ var Emitter = (function() {
 			var listeners = events[event];
 			if (listeners) {
 				if (callback) {
-					removeListener(listeners, callback);
+					removeCallback(listeners, callback);
 				}
 				else {
 					removeEvent(listeners);
@@ -42,9 +42,8 @@ var Emitter = (function() {
 				var listener = listeners[i];
 				if (listener) {
 					listener.callback.apply(null, args);
-					listener.callCount++;
-					if (listener.callCount == listener.maxCalls) {
-						removeListener(listeners, listener.callback);
+					if (++listener.callCount == listener.maxCalls) {
+						removeListener(listeners, listener);
 					}
 				}
 			}
@@ -79,7 +78,7 @@ var Emitter = (function() {
 		listeners._requiresCompact = true;
 	}
 
-	function removeListener(listeners, callback) {
+	function removeCallback(listeners, callback) {
 		for (var i = 0, l = listeners.length; i < l; ++i) {
 			var listener = listeners[i];
 			if (listener && listener.callback == callback) {
@@ -87,6 +86,14 @@ var Emitter = (function() {
 				listeners._requiresCompact = true;
 				return;
 			}
+		}
+	}
+
+	function removeListener(listeners, listener) {
+		var i = listeners.indexOf(listener);
+		if (i != -1) {
+			listeners[i] = undefined;
+			listeners._requiresCompact = true;
 		}
 	}
 
