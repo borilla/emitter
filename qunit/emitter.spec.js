@@ -241,3 +241,51 @@
 		ok(listener3.notCalled, 'Listener3 was still not called');
 	});
 }());
+
+(function() {
+	var emitter;
+	var listener1, listener2, listener3;
+
+	module('Namespaces', {
+		setup: function() {
+			emitter = new Emitter();
+			listener1 = sinon.stub();
+			listener2 = sinon.stub();
+			listener3 = sinon.stub();
+		},
+		teardown: function() {
+		}
+	});
+
+	test('should be able to add an event listener with namespace/s', function() {
+		emitter.on('event.namespace1', listener1);
+		emitter.on('event.namespace1.namespace2', listener2);
+		expect(0);
+	});
+
+	test('should trigger all listeners if namespace is not specified', function() {
+		emitter.on('event.namespace1', listener1);
+		emitter.on('event.namespace2', listener2);
+		emitter.trigger('event');
+		equal(listener1.callCount, 1, 'listener1 should have been called once');
+		equal(listener2.callCount, 1, 'listener2 should have been called once');
+	});
+
+	test('should only trigger events with matching namespaces', function() {
+		emitter.on('event.namespace1.namespace3', listener1);
+		emitter.on('event.namespace2.namespace3', listener2);
+		emitter.trigger('event.namespace3.namespace1');
+		equal(listener1.callCount, 1, 'listener1 should have been called once');
+		equal(listener2.callCount, 0, 'listener2 should not have been called');
+	});
+
+	test('should only remove events with matching namespaces', function() {
+		emitter.on('event.namespace1', listener1);
+		emitter.on('event.namespace2', listener2);
+		emitter.off('event.namespace1');
+		emitter.trigger('event');
+		equal(listener1.callCount, 0, 'listener1 should have been removed');
+		equal(listener2.callCount, 1, 'listener2 should not have been removed');
+	});
+
+}());
