@@ -34,9 +34,9 @@
 	test('should be able to trigger listener to an event', function() {
 		emitter.on('event', listener1);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener was called once');
+		equal(listener1.callCount, 1, 'Listener should have been called once');
 		emitter.trigger('event');
-		ok(listener1.calledTwice, 'Listener was called again');
+		equal(listener1.callCount, 2, 'Listener should have been called again');
 	});
 
 	test('should not fail if we trigger an event with no listeners', function() {
@@ -48,8 +48,8 @@
 		emitter.on('event', listener1);
 		emitter.on('event', listener2);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.calledOnce, 'Listener1 was called once');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 1, 'Listener1 should have been called once');
 	});
 
 	test('should trigger listeners in the same order as they were added', function() {
@@ -57,8 +57,8 @@
 		emitter.on('event', listener2);
 		emitter.on('event', listener3);
 		emitter.trigger('event');
-		ok(listener1.calledBefore(listener2), 'Listener1 was called before listener2');
-		ok(listener2.calledBefore(listener3), 'Listener2 was called before listener3');
+		ok(listener1.calledBefore(listener2), 'Listener1 should have been called before listener2');
+		ok(listener2.calledBefore(listener3), 'Listener2 should have been called before listener3');
 	});
 
 	test('should call listeners with arguments sent to trigger', function() {
@@ -68,8 +68,8 @@
 		emitter.on('event', listener1);
 		emitter.on('event', listener2);
 		emitter.trigger('event', arg1, arg2, arg3);
-		ok(listener1.calledWith(arg1, arg2, arg3), 'Listener1 was called with expected arguments');
-		ok(listener2.calledWith(arg1, arg2, arg3), 'Listener2 was called with expected arguments');
+		ok(listener1.calledWith(arg1, arg2, arg3), 'Listener1 should have been called with expected arguments');
+		ok(listener2.calledWith(arg1, arg2, arg3), 'Listener2 should have been called with expected arguments');
 	});
 
 	test('should be able to remove a single listener', function() {
@@ -78,9 +78,9 @@
 		emitter.on('event', listener3);
 		emitter.off('event', listener2);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.notCalled, 'Listener2 was not called');
-		ok(listener3.calledOnce, 'Listener3 was called once');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 0, 'Listener2 should not have been called');
+		equal(listener3.callCount, 1, 'Listener3 should have been called once');
 	});
 
 	test('should be able to remove all listeners to an event', function() {
@@ -88,8 +88,8 @@
 		emitter.on('event', listener2);
 		emitter.off('event');
 		emitter.trigger('event');
-		ok(listener1.notCalled, 'Listener1 was not called');
-		ok(listener2.notCalled, 'Listener2 was not called');
+		equal(listener1.callCount, 0, 'Listener1 should not have been called');
+		equal(listener2.callCount, 0, 'Listener2 should not have been called');
 	});
 
 	test('should be able to remove all listeners to all events', function() {
@@ -98,8 +98,8 @@
 		emitter.off();
 		emitter.trigger('event1');
 		emitter.trigger('event2');
-		ok(listener1.notCalled, 'Listener1 was not called');
-		ok(listener2.notCalled, 'Listener2 was not called');
+		equal(listener1.callCount, 0, 'Listener1 should not have been called');
+		equal(listener2.callCount, 0, 'Listener2 should not have been called');
 	});
 
 	test('should be able to add a listener to fire only once', function() {
@@ -107,15 +107,15 @@
 		emitter.once('event', listener2);
 		emitter.trigger('event');
 		emitter.trigger('event');
-		ok(listener1.calledTwice, 'Listener1 was called twice');
-		ok(listener2.calledOnce, 'Listener2 was called only once');
+		equal(listener1.callCount, 2, 'Listener1 should have been called twice');
+		equal(listener2.callCount, 1, 'Listener2 should have been called only once');
 	});
 
 	test('should be able to remove a one-time listener', function() {
 		emitter.once('event', listener1);
 		emitter.off('event', listener1);
 		emitter.trigger('event');
-		ok(listener1.notCalled, 'Listener1 was not called');
+		equal(listener1.callCount, 0, 'Listener1 should not have been called');
 	});
 
 	test('should remove correct item when same callback is added as one-time then multiple-time listener', function() {
@@ -172,13 +172,13 @@
 		emitter.on('event', listener2);
 		emitter.on('event', listener3);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.calledOnce, 'Listener2 was called once');
-		ok(listener3.calledOnce, 'Listener3 was called once');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 1, 'Listener2 should have been called once');
+		equal(listener3.callCount, 1, 'Listener3 should have been called once');
 		emitter.trigger('event');
-		ok(listener1.calledTwice, 'Listener1 was called again');
-		ok(listener2.calledOnce, 'Listener2 was not called again');
-		ok(listener3.calledTwice, 'Listener3 was called again');
+		equal(listener1.callCount, 2, 'Listener1 should have been called again');
+		equal(listener2.callCount, 1, 'Listener2 should not have been called again');
+		equal(listener3.callCount, 2, 'Listener3 should have been called again');
 	});
 
 	test('should be able to remove a later listener to the same event', function() {
@@ -189,9 +189,9 @@
 		emitter.on('event', listener2);
 		emitter.on('event', listener3);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.notCalled, 'Listener2 was not called');
-		ok(listener3.calledOnce, 'Listener3 was called once');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 0, 'Listener2 should not have been called');
+		equal(listener3.callCount, 1, 'Listener3 should have been called once');
 	});
 
 	test('should be able to remove an earlier listener to the same event', function() {
@@ -202,9 +202,9 @@
 		emitter.on('event', listener2);
 		emitter.on('event', listener3);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.calledOnce, 'Listener2 was called once');
-		ok(listener3.calledOnce, 'Listener3 was called once');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 1, 'Listener2 should have been called once');
+		equal(listener3.callCount, 1, 'Listener3 should have been called once');
 	});
 
 	test('should be able to remove all listeners to its own event', function() {
@@ -215,13 +215,13 @@
 		emitter.on('event', listener2);
 		emitter.on('event', listener3);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.calledOnce, 'Listener2 was called once');
-		ok(listener3.notCalled, 'Listener3 was not called');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 1, 'Listener2 should have been called once');
+		equal(listener3.callCount, 0, 'Listener3 should not have been called');
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was not called again');
-		ok(listener2.calledOnce, 'Listener2 was not called again');
-		ok(listener3.notCalled, 'Listener3 was still not called');
+		equal(listener1.callCount, 1, 'Listener1 should not have been called again');
+		equal(listener2.callCount, 1, 'Listener2 should not have been called again');
+		equal(listener3.callCount, 0, 'Listener3 should still not have been called');
 	});
 
 	test('should be able to remove all listeners to all events', function() {
@@ -232,13 +232,13 @@
 		emitter.on('event', listener2);
 		emitter.on('event', listener3);
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was called once');
-		ok(listener2.calledOnce, 'Listener2 was called once');
-		ok(listener3.notCalled, 'Listener3 was not called');
+		equal(listener1.callCount, 1, 'Listener1 should have been called once');
+		equal(listener2.callCount, 1, 'Listener2 should have been called once');
+		equal(listener3.callCount, 0, 'Listener3 should not have been called');
 		emitter.trigger('event');
-		ok(listener1.calledOnce, 'Listener1 was not called again');
-		ok(listener2.calledOnce, 'Listener2 was not called again');
-		ok(listener3.notCalled, 'Listener3 was still not called');
+		equal(listener1.callCount, 1, 'Listener1 should not have been called again');
+		equal(listener2.callCount, 1, 'Listener2 should not have been called again');
+		equal(listener3.callCount, 0, 'Listener3 should still not have been called');
 	});
 }());
 
