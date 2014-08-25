@@ -79,7 +79,7 @@ var Emitter = (function() {
 	 */
 	function newEvent() {
 		var listeners = [];
-		listeners._requiresCompact = false;
+		listeners._removed = 0;
 		listeners._depth = 0;
 		return listeners;
 	}
@@ -88,8 +88,8 @@ var Emitter = (function() {
 	 * remove a listener (used as callback for forEachListener)
 	 */
 	function removeListener(listener, listeners, i) {
-		delete listeners[i];
-		listeners._requiresCompact = true;
+		listeners[i] = null;
+		listeners._removed++;
 	}
 
 	/**
@@ -159,9 +159,9 @@ var Emitter = (function() {
 	 * compact listeners, removing all deleted listeners from array
 	 */
 	function compactListeners(listeners) {
-		if (listeners._requiresCompact) {
+		if (listeners._removed) {
 			compactArray(listeners);
-			listeners._requiresCompact = false;
+			listeners._removed = 0;
 		}
 	}
 
@@ -169,11 +169,11 @@ var Emitter = (function() {
 	 * remove all falsy items from an array, modifying the original array
 	 */
 	function compactArray(array) {
-		for (var i = 0, length = array.length; i < length; ++i) {
+		for (var i = 0, j = 0, l = array.length; i < l; ++i) {
 			var value = array[i];
-			value && array.push(value);
+			value && (array[j++] = value);
 		}
-		array.splice(0, length);
+		array.length = j;
 	}
 
 	return Emitter;
