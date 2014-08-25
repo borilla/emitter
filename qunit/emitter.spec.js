@@ -1,3 +1,14 @@
+function isCompact(emitter) {
+	var events = emitter._events;
+	for (var event in events) {
+		var listeners = events[event];
+		if (listeners._requiresCompact) {
+			return false;
+		}
+	}
+	return true;
+}
+
 (function() {
 	module('Emitter');
 
@@ -23,12 +34,19 @@
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
+			ok(isCompact(emitter), 'emitter should be left properly compacted');
 		}
 	});
 
 	test('should be able to add a listener to an event', function() {
 		emitter.on('event', listener1);
-		expect(0);
+		expect(1);
+	});
+
+	test('should be able to remove a listener to an event', function() {
+		emitter.on('event', listener1);
+		emitter.off('event', listener1);
+		expect(1);
 	});
 
 	test('should be able to trigger listener to an event', function() {
@@ -41,7 +59,7 @@
 
 	test('should not fail if we trigger an event with no listeners', function() {
 		emitter.trigger('xxx');
-		expect(0);
+		expect(1);
 	});
 
 	test('should be able to trigger multiple listeners', function() {
@@ -161,6 +179,7 @@
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
+			ok(isCompact(emitter), 'emitter should be left properly compacted');
 		}
 	});
 
@@ -240,6 +259,25 @@
 		equal(listener2.callCount, 1, 'Listener2 should not have been called again');
 		equal(listener3.callCount, 0, 'Listener3 should still not have been called');
 	});
+
+	test('should be able to recursively trigger its own event', function() {
+		var remainingCalls = 10;
+		listener2 = sinon.spy(function() {
+			emitter.off('event', listener3);
+		});
+		listener1 = sinon.spy(function() {
+			if (--remainingCalls) {
+				emitter.on('event', listener3);
+				emitter.once('event', listener2);
+				emitter.trigger('event');
+			}
+		});
+		emitter.on('event', listener1);
+		emitter.trigger('event');
+		equal(listener1.callCount, 10, 'listener1 should have been called ten times');
+		equal(listener2.callCount, 9, 'listener2 should have been called nine times');
+		equal(listener3.callCount, 9, 'listener3 should have been called nine times');
+	});
 }());
 
 (function() {
@@ -254,13 +292,14 @@
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
+			ok(isCompact(emitter), 'emitter should be left properly compacted');
 		}
 	});
 
 	test('should be able to add an event listener with namespace/s', function() {
 		emitter.on('event.namespace1', listener1);
 		emitter.on('event.namespace1.namespace2', listener2);
-		expect(0);
+		expect(1);
 	});
 
 	test('should trigger all listeners if namespace is not specified', function() {

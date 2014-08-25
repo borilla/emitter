@@ -37,7 +37,6 @@ var Emitter = (function() {
 	Emitter.prototype.trigger = function(event) {
 		var events = this._events;
 		var args = slice.call(arguments, 1);
-		compact(events, event);
 		forEachListener(triggerListener, events, event);
 
 		function triggerListener(listener, listeners, i) {
@@ -81,6 +80,7 @@ var Emitter = (function() {
 	function newEvent() {
 		var listeners = [];
 		listeners._requiresCompact = false;
+		listeners._depth = 0;
 		return listeners;
 	}
 
@@ -108,6 +108,7 @@ var Emitter = (function() {
 			namespaces = namespaces.length ? namespaces : null;
 			var listeners = events[event];
 			if (listeners) {
+				listeners._depth++;
 				for (var i = 0, l = listeners.length; i < l; ++i) {
 					var listener = listeners[i];
 					if (listenerMatches(listener, callback, namespaces)) {
@@ -117,6 +118,9 @@ var Emitter = (function() {
 							break;
 						}
 					}
+				}
+				if (--listeners._depth == 0) {
+					compactListeners(listeners);
 				}
 			}
 		}
@@ -139,10 +143,10 @@ var Emitter = (function() {
 		if (!superset || superset.length < length) {
 			return false;
 		}
-		if (length == 1) {
-			return superset.indexOf(subset[0]) != -1;
+		if (superset.indexOf(subset[0]) == -1) {
+			return false;
 		}
-		for (var i = 0; i < length; ++i) {
+		for (var i = 1; i < length; ++i) {
 			var item = subset[i];
 			if (superset.indexOf(item) == -1) {
 				return false;
@@ -152,33 +156,24 @@ var Emitter = (function() {
 	}
 
 	/**
-	 * compact listeners for an event - ie strip out deleted items
+	 * compact listeners, removing all deleted listeners from array
 	 */
-	function compact(events, event) {
-		event = event.split('.')[0];
-		var listeners = events[event];
-		if (listeners && listeners._requiresCompact) {
-			listeners = compactArray(listeners);
-			if (listeners.length) {
-				events[event] = listeners;
-				listeners._requiresCompact = false;
-			}
-			else {
-				delete events[event];
-			}
+	function compactListeners(listeners) {
+		if (listeners._requiresCompact) {
+			compactArray(listeners);
+			listeners._requiresCompact = false;
 		}
 	}
 
 	/**
-	 * return a copy of array with all falsy values removed
+	 * remove all falsy items from an array, modifying the original array
 	 */
 	function compactArray(array) {
-		var result = [];
-		for (var i = 0, l = array.length; i < l; ++i) {
+		for (var i = 0, length = array.length; i < length; ++i) {
 			var value = array[i];
-			value && result.push(value);
+			value && array.push(value);
 		}
-		return result;
+		array.splice(0, length);
 	}
 
 	return Emitter;
