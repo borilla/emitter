@@ -9,12 +9,14 @@ var Emitter = (function() {
 		this._events = {};
 	}
 
+	var EmitterPrototype = Emitter.prototype;
+
 	/**
 	 * add a listener to be fired when event occurs
 	 * @param  {string}   event    name of the event (can contain optional namespaces separated by '.' character)
 	 * @param  {function} callback function to be called when event occurs
 	 */
-	Emitter.prototype.on = function(event, callback) {
+	EmitterPrototype.on = function(event, callback) {
 		var listener = callback.callback ? callback : {
 			callback: callback
 		};
@@ -26,7 +28,7 @@ var Emitter = (function() {
 	 * @param  {string}   event    (optional) name of the event (with possible namespaces) to remove events for
 	 * @param  {function} callback (optional) specific callback to remove
 	 */
-	Emitter.prototype.off = function(event, callback) {
+	EmitterPrototype.off = function(event, callback) {
 		forEachListener(removeListener, this._events, event, callback);
 	}
 
@@ -34,14 +36,14 @@ var Emitter = (function() {
 	 * trigger an event
 	 * @param  {string} event name of the event to trigger (with )
 	 */
-	Emitter.prototype.trigger = function(event) {
+	EmitterPrototype.trigger = function(event) {
 		var events = this._events;
 		var args = slice.call(arguments, 1);
 		forEachListener(triggerListener, events, event);
 
 		function triggerListener(listener, listeners, i) {
 			listener.callback.apply(null, args);
-			if (++listener.callCount == listener.maxCalls) {
+			if (++listener.calls == listener.maxCalls) {
 				removeListener(listener, listeners, i);
 			}
 		}
@@ -52,7 +54,7 @@ var Emitter = (function() {
 	 * @param  {string}   event    name of the event (with optional namespaces separated by '.' character)
 	 * @param  {function} callback function to be called when event occurs
 	 */
-	Emitter.prototype.once = function(event, callback) {
+	EmitterPrototype.once = function(event, callback) {
 		var listener = {
 			callback: callback,
 			maxCalls: 1
@@ -69,7 +71,7 @@ var Emitter = (function() {
 		if (namespaces.length) {
 			listener.namespaces = namespaces;
 		}
-		listener.callCount = listener.callCount || 0;
+		listener.calls = 0;
 		var listeners = events[event] || (events[event] = newEvent());
 		listeners.push(listener);
 	}
