@@ -7,6 +7,7 @@ var Emitter = (function() {
 	 */
 	function Emitter() {
 		this._events = {};
+		this._flags = {};
 	}
 
 	var EmitterPrototype = Emitter.prototype;
@@ -20,7 +21,7 @@ var Emitter = (function() {
 		var listener = callback.callback ? callback : {
 			callback: callback
 		};
-		addListener(this._events, event, listener);
+		addListener(this, event, listener);
 	}
 
 	/**
@@ -36,16 +37,13 @@ var Emitter = (function() {
 	 * trigger an event
 	 * @param  {string} event name of the event to trigger (with )
 	 */
-	EmitterPrototype.trigger = function(event) {
+	EmitterPrototype.trigger = function(event/*, args... */) {
 		var events = this._events;
 		var args = slice.call(arguments, 1);
-		forEachListener(triggerListener, events, event);
+		forEachListener(trigger, events, event);
 
-		function triggerListener(listener, listeners, i) {
-			listener.callback.apply(null, args);
-			if (++listener.calls == listener.maxCalls) {
-				removeListener(listener, listeners, i);
-			}
+		function trigger(listener, listeners, i) {
+			triggerListener(listener, args, listeners, i);
 		}
 	}
 
@@ -59,13 +57,58 @@ var Emitter = (function() {
 			callback: callback,
 			maxCalls: 1
 		};
-		addListener(this._events, event, listener);
+		addListener(this, event, listener);
+	}
+
+	/**
+	 * flag that an event has occured
+	 * @param  {string} event name of the event (with optional namespaces separated by '.' character)
+	 */
+	EmitterPrototype.flag = function(event/*, args... */) {
+		var args = slice.call(arguments);
+		args.unshift(this._flags)
+		addFlag.apply(null, args);
+		EmitterPrototype.trigger.apply(this, arguments);
+	}
+
+	/**
+	 * remove flagged event
+	 * @param  {string} event name of the event (with optional namespaces separated by '.' character)
+	 */
+	EmitterPrototype.unflag = function(event) {
+		forEachMatchingFlag(remove, this, event);
+
+		function remove(flag, flags, i) {
+			flags[i] = null;
+			flags._removed++;
+		}
+	}
+
+	function addFlag(flags, event/*, args...*/) {
+		var namespaces = event.split('.');
+		event = namespaces.shift();
+		var flag = {
+			args: slice.call(arguments, 2)
+		};
+		if (namespaces.length) {
+			flag.namespaces = namespaces;
+		}
+		var flaggedEvents = flags[event] || (flags[event] = newFlags());
+		flaggedEvents.push(flag);
+	}
+
+	function newFlags() {
+		var flags = [];
+		flags._depth = 0;
+		flags._removed = 0;
+		return flags;
 	}
 
 	/**
 	 * add a listener to an event
 	 */
-	function addListener(events, event, listener) {
+	function addListener(emitter, event, listener) {
+		var events = emitter._events;
 		var namespaces = event.split('.');
 		event = namespaces.shift();
 		if (namespaces.length) {
@@ -73,7 +116,12 @@ var Emitter = (function() {
 		}
 		listener.calls = 0;
 		var listeners = events[event] || (events[event] = newEvent());
-		listeners.push(listener);
+		var index = listeners.push(listener) - 1;
+
+		forEachMatchingFlag(_triggerListener, emitter, event, namespaces);
+		function _triggerListener(flag, flags, i) {
+			triggerListener(listener, flag.args, listeners, index);
+		}
 	}
 
 	/**
@@ -84,6 +132,17 @@ var Emitter = (function() {
 		listeners._removed = 0;
 		listeners._depth = 0;
 		return listeners;
+	}
+
+	/**
+	 * trigger a listener with the specified args
+	 * [Other params are used to remove listener if it reaches maxCalls]
+	 */
+	function triggerListener(listener, args, listeners, i) {
+		listener.callback.apply(null, args);
+		if (++listener.calls == listener.maxCalls) {
+			removeListener(listener, listeners, i);
+		}
 	}
 
 	/**
@@ -122,35 +181,62 @@ var Emitter = (function() {
 					}
 				}
 				if (--listeners._depth == 0) {
-					compactListeners(listeners);
+					stripRemoved(listeners);
+				}
+			}
+		}
+
+		function listenerMatches(listener, callback, namespaces) {
+			return listener
+				&& (!callback || callback == listener.callback)
+				&& (!namespaces || isSubset(namespaces, listener.namespaces));
+		}
+	}
+
+	function forEachMatchingFlag(fn, emitter, event, namespaces) {
+		// if event not specified then apply to all events
+		if (!event) {
+			for (event in events) {
+				forEachMatchingFlag(fn, emitter, event);
+			}
+		}
+		else {
+			if (!namespaces) {
+				namespaces = event.split('.');
+				event = namespaces.shift();
+			}
+			var flags = emitter._flags[event];
+			if (flags) {
+				flags._depth++;
+				for (var i = 0, l = flags.length; i < l; ++i) {
+					var flag = flags[i];
+					if (flag && isSubset(flag.namespaces, namespaces)) {
+						fn.call(null, flag, flags, i);
+					}
+				}
+				if (--flags._depth == 0) {
+					stripRemoved(flags);
 				}
 			}
 		}
 	}
 
 	/**
-	 * return if listener is a match for (optional) specified callback and namespaces
-	 */
-	function listenerMatches(listener, callback, namespaces) {
-		return (listener
-			&& (!callback || callback == listener.callback)
-			&& (!namespaces || isSubset(namespaces, listener.namespaces)));
-	}
-
-	/**
-	 * return if all items in subset array are contained in superset
+	 * return if all items in subset array are contained in superset array
+	 *
+	 * used for comparing sets of namespaces
+	 * if item is null or undefined then is considered an empty array
 	 */
 	function isSubset(subset, superset) {
-		var length = subset.length;
-		if (!superset || superset.length < length) {
-			return false;
+		var length;
+		if (!subset || (length = subset.length) == 0) {
+			return true;
 		}
-		if (superset.indexOf(subset[0]) == -1) {
+		if (!superset || superset.length < length || superset.indexOf(subset[0]) == -1) {
 			return false;
 		}
 		for (var i = 1; i < length; ++i) {
-			var item = subset[i];
-			if (superset.indexOf(item) == -1) {
+			if (superset.indexOf(subset[i]) == -1) {
 				return false;
 			}
 		}
@@ -158,12 +244,12 @@ var Emitter = (function() {
 	}
 
 	/**
-	 * compact listeners, removing all deleted listeners from array
+	 * strip any removed items from listeners or flags array (if required)
 	 */
-	function compactListeners(listeners) {
-		if (listeners._removed) {
-			compactArray(listeners);
-			listeners._removed = 0;
+	function stripRemoved(array) {
+		if (array._removed) {
+			compactArray(array);
+			array._removed = 0;
 		}
 	}
 

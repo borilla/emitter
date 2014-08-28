@@ -2,7 +2,7 @@ function isCompact(emitter) {
 	var events = emitter._events;
 	for (var event in events) {
 		var listeners = events[event];
-		if (listeners._requiresCompact) {
+		if (listeners._removed !== 0) {
 			return false;
 		}
 	}
@@ -171,7 +171,7 @@ function isCompact(emitter) {
 	var emitter;
 	var listener1, listener2, listener3;
 
-	module('Event listener', {
+	module('Emitter listeners', {
 		setup: function() {
 			emitter = new Emitter();
 			listener1 = sinon.stub();
@@ -284,7 +284,7 @@ function isCompact(emitter) {
 	var emitter;
 	var listener1, listener2, listener3;
 
-	module('Namespaces', {
+	module('Emitter namespaces', {
 		setup: function() {
 			emitter = new Emitter();
 			listener1 = sinon.stub();
@@ -316,6 +316,12 @@ function isCompact(emitter) {
 		emitter.trigger('event.namespace3.namespace1');
 		equal(listener1.callCount, 1, 'listener1 should have been called once');
 		equal(listener2.callCount, 0, 'listener2 should not have been called');
+		emitter.trigger('event.namespace3');
+		equal(listener1.callCount, 2, 'listener1 should have been called twice');
+		equal(listener2.callCount, 1, 'listener2 should have been called once');
+		emitter.trigger('event.namespace2');
+		equal(listener1.callCount, 2, 'listener1 should have been called twice');
+		equal(listener2.callCount, 2, 'listener2 should have been called twice');
 	});
 
 	test('should only remove events with matching namespaces', function() {
@@ -327,4 +333,54 @@ function isCompact(emitter) {
 		equal(listener2.callCount, 1, 'listener2 should not have been removed');
 	});
 
+}());
+
+(function() {
+	var emitter;
+	var listener1, listener2, listener3;
+
+	module('Emitter flag', {
+		setup: function() {
+			emitter = new Emitter();
+			listener1 = sinon.stub();
+			listener2 = sinon.stub();
+			listener3 = sinon.stub();
+		},
+		teardown: function() {
+			ok(isCompact(emitter), 'emitter should be left properly compacted');
+		}
+	});
+
+	test('should be able to flag that an event has occured', function() {
+		emitter.flag('event');
+		expect(1);
+	});
+
+	test('should fire existing listeners when event is flagged', function() {
+		emitter.on('event', listener1);
+		emitter.flag('event');
+		equal(listener1.callCount, 1, 'listener1 should have been called once');
+	});
+
+	test('should call existing listeners with arguments sent to flag', function() {
+		var arg1 = 'john';
+		var arg2 = {};
+		var arg3 = [];
+		emitter.on('event', listener1);
+		emitter.flag('event', arg1, arg2, arg3);
+		ok(listener1.calledWith(arg1, arg2, arg3), 'Listener1 should have been called with expected arguments');
+	});
+
+	test('should fire listeners added after event is flagged', function() {
+		emitter.flag('event');
+		emitter.on('event', listener1);
+		equal(listener1.callCount, 1, 'listener1 should have been called once');
+	});
+
+	test('should be able to remove a flag', function() {
+		emitter.flag('event');
+		emitter.unflag('event');
+		emitter.on('event', listener1);
+		equal(listener1.callCount, 0, 'listener1 should not have been called');
+	});
 }());
