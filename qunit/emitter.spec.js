@@ -1,19 +1,8 @@
-function isCompact(emitter) {
-	var events = emitter._events;
-	for (var event in events) {
-		var listeners = events[event];
-		if (listeners._removed !== 0) {
-			return false;
-		}
-	}
-	return true;
-}
-
 (function() {
 	module('Emitter');
 
 	test('should exist and be a function', function() {
-		equal(typeof(Emitter), 'function', 'Emitter is a function');
+		equal(typeof Emitter, 'function', 'Emitter is a function');
 	});
 
 	test('should create an instance of an emitter', function() {
@@ -26,7 +15,7 @@ function isCompact(emitter) {
 	var emitter;
 	var listener1, listener2, listener3;
 
-	module('Emitter instance', {
+	module('Emitter (instance)', {
 		setup: function() {
 			emitter = new Emitter();
 			listener1 = sinon.stub();
@@ -34,19 +23,19 @@ function isCompact(emitter) {
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
-			ok(isCompact(emitter), 'emitter should be left properly compacted');
+			checkEmitterIsCompact(emitter);
 		}
 	});
 
 	test('should be able to add a listener to an event', function() {
+		equal(typeof emitter.on, 'function', 'emitter has an "on" method');
 		emitter.on('event', listener1);
-		expect(1);
 	});
 
 	test('should be able to remove a listener to an event', function() {
+		equal(typeof emitter.off, 'function', 'emitter has an "off" method');
 		emitter.on('event', listener1);
 		emitter.off('event', listener1);
-		expect(1);
 	});
 
 	test('should be able to trigger listener to an event', function() {
@@ -58,8 +47,8 @@ function isCompact(emitter) {
 	});
 
 	test('should not fail if we trigger an event with no listeners', function() {
+		expect(0);
 		emitter.trigger('xxx');
-		expect(1);
 	});
 
 	test('should be able to trigger multiple listeners', function() {
@@ -171,7 +160,7 @@ function isCompact(emitter) {
 	var emitter;
 	var listener1, listener2, listener3;
 
-	module('Emitter listeners', {
+	module('Emitter (listener)', {
 		setup: function() {
 			emitter = new Emitter();
 			listener1 = sinon.stub();
@@ -179,7 +168,7 @@ function isCompact(emitter) {
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
-			ok(isCompact(emitter), 'emitter should be left properly compacted');
+			checkEmitterIsCompact(emitter);
 		}
 	});
 
@@ -284,7 +273,7 @@ function isCompact(emitter) {
 	var emitter;
 	var listener1, listener2, listener3;
 
-	module('Emitter namespaces', {
+	module('Emitter (namespaces)', {
 		setup: function() {
 			emitter = new Emitter();
 			listener1 = sinon.stub();
@@ -292,14 +281,14 @@ function isCompact(emitter) {
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
-			ok(isCompact(emitter), 'emitter should be left properly compacted');
+			checkEmitterIsCompact(emitter);
 		}
 	});
 
 	test('should be able to add an event listener with namespace/s', function() {
+		expect(0);
 		emitter.on('event.namespace1', listener1);
 		emitter.on('event.namespace1.namespace2', listener2);
-		expect(1);
 	});
 
 	test('should trigger all listeners if namespace is not specified', function() {
@@ -339,7 +328,7 @@ function isCompact(emitter) {
 	var emitter;
 	var listener1, listener2, listener3;
 
-	module('Emitter flag', {
+	module('Emitter (flags)', {
 		setup: function() {
 			emitter = new Emitter();
 			listener1 = sinon.stub();
@@ -347,13 +336,13 @@ function isCompact(emitter) {
 			listener3 = sinon.stub();
 		},
 		teardown: function() {
-			ok(isCompact(emitter), 'emitter should be left properly compacted');
+			checkEmitterIsCompact(emitter);
 		}
 	});
 
 	test('should be able to flag that an event has occured', function() {
+		equal(typeof emitter.flag, 'function', 'emitter has a "flag" method');
 		emitter.flag('event');
-		expect(1);
 	});
 
 	test('should fire existing listeners when event is flagged', function() {
@@ -378,9 +367,24 @@ function isCompact(emitter) {
 	});
 
 	test('should be able to remove a flag', function() {
+		equal(typeof emitter.unflag, 'function', 'emitter has an "unflag" method');
 		emitter.flag('event');
 		emitter.unflag('event');
 		emitter.on('event', listener1);
 		equal(listener1.callCount, 0, 'listener1 should not have been called');
 	});
 }());
+
+function checkEmitterIsCompact(emitter) {
+	if (emitter && emitter._isCompact) {
+		incrementExpectedTests();
+		ok(emitter._isCompact(), 'emitter should be left properly compacted');
+	}
+}
+
+function incrementExpectedTests(inc) {
+	var e = expect();
+	if (typeof e == 'number') {
+		expect(e + (inc || 1));
+	}
+}

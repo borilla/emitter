@@ -1,12 +1,10 @@
 var Emitter = (function() {
 
-	var slice = Array.prototype.slice;
-
 	/**
 	 * construct a new event emitter
 	 */
 	function Emitter() {
-		this._events = {};
+		this._listeners = {};
 		this._flags = {};
 	}
 
@@ -30,16 +28,17 @@ var Emitter = (function() {
 	 * @param  {function} callback (optional) specific callback to remove
 	 */
 	EmitterPrototype.off = function(event, callback) {
-		forEachListener(removeListener, this._events, event, callback);
+		forEachListener(removeListener, this._listeners, event, callback);
 	}
 
 	/**
 	 * trigger an event
-	 * @param  {string} event name of the event to trigger (with )
+	 * @param  {string} event name of the event to trigger (with optional namespace)
+	 *         {}       [...] optional additional arguments to send to listeners
 	 */
 	EmitterPrototype.trigger = function(event/*, args... */) {
-		var events = this._events;
-		var args = slice.call(arguments, 1);
+		var events = this._listeners;
+		var args = argsToArray(arguments, 1);
 		forEachListener(trigger, events, event);
 
 		function trigger(listener, listeners, i) {
@@ -63,10 +62,11 @@ var Emitter = (function() {
 	/**
 	 * flag that an event has occured
 	 * @param  {string} event name of the event (with optional namespaces separated by '.' character)
+	 *         {}       [...] optional additional arguments to send to listeners
 	 */
 	EmitterPrototype.flag = function(event/*, args... */) {
-		var args = slice.call(arguments);
-		args.unshift(this._flags)
+		var args = argsToArray(arguments);
+		args.unshift(this._flags);
 		addFlag.apply(null, args);
 		EmitterPrototype.trigger.apply(this, arguments);
 	}
@@ -76,25 +76,29 @@ var Emitter = (function() {
 	 * @param  {string} event name of the event (with optional namespaces separated by '.' character)
 	 */
 	EmitterPrototype.unflag = function(event) {
-		forEachMatchingFlag(remove, this, event);
+		forEachMatchingFlag(unflag, this, event);
 
-		function remove(flag, flags, i) {
+		function unflag(flag, flags, i) {
 			flags[i] = null;
 			flags._removed++;
 		}
+	}
+
+	EmitterPrototype._isCompact = function() {
+		return isObjectCompact(this._listeners) && isObjectCompact(this._flags);
 	}
 
 	function addFlag(flags, event/*, args...*/) {
 		var namespaces = event.split('.');
 		event = namespaces.shift();
 		var flag = {
-			args: slice.call(arguments, 2)
+			_args: argsToArray(arguments, 2)
 		};
 		if (namespaces.length) {
-			flag.namespaces = namespaces;
+			flag._namespaces = namespaces;
 		}
-		var flaggedEvents = flags[event] || (flags[event] = newFlags());
-		flaggedEvents.push(flag);
+		var eventFlags = flags[event] || (flags[event] = newFlags());
+		eventFlags.push(flag);
 	}
 
 	function newFlags() {
@@ -108,19 +112,20 @@ var Emitter = (function() {
 	 * add a listener to an event
 	 */
 	function addListener(emitter, event, listener) {
-		var events = emitter._events;
+		var listeners = emitter._listeners;
 		var namespaces = event.split('.');
 		event = namespaces.shift();
 		if (namespaces.length) {
-			listener.namespaces = namespaces;
+			listener._namespaces = namespaces;
 		}
 		listener.calls = 0;
-		var listeners = events[event] || (events[event] = newEvent());
-		var index = listeners.push(listener) - 1;
+		var eventListeners = listeners[event] || (listeners[event] = newEvent());
+		var index = eventListeners.push(listener) - 1;
 
 		forEachMatchingFlag(_triggerListener, emitter, event, namespaces);
+
 		function _triggerListener(flag, flags, i) {
-			triggerListener(listener, flag.args, listeners, index);
+			triggerListener(listener, flag._args, listeners, index);
 		}
 	}
 
@@ -189,7 +194,7 @@ var Emitter = (function() {
 		function listenerMatches(listener, callback, namespaces) {
 			return listener
 				&& (!callback || callback == listener.callback)
-				&& (!namespaces || isSubset(namespaces, listener.namespaces));
+				&& (!namespaces || isSubset(namespaces, listener._namespaces));
 		}
 	}
 
@@ -210,7 +215,7 @@ var Emitter = (function() {
 				flags._depth++;
 				for (var i = 0, l = flags.length; i < l; ++i) {
 					var flag = flags[i];
-					if (flag && isSubset(flag.namespaces, namespaces)) {
+					if (flag && isSubset(flag._namespaces, namespaces)) {
 						fn.call(null, flag, flags, i);
 					}
 				}
@@ -262,6 +267,46 @@ var Emitter = (function() {
 			value && (array[j++] = value);
 		}
 		array.length = j;
+	}
+
+	/**
+	 * return if array is compact, ie doesn't contain any falsy items
+	 */
+	function isArrayCompact(array) {
+		for (var i = 0, l = array.length; i < l; ++i) {
+			var item = array[i];
+			if (!item) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function isObjectCompact(object) {
+		for (var i in object) {
+			if (!isArrayCompact(object[i])) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * convert arguments collection to an array
+	 */
+	function argsToArray(args, start) {
+		start = start || 0;
+		var length = args.length;
+		var size = length - start;
+		if (size <= 0) {
+			return [];
+		}
+		// else
+		var array = Array(size);
+		for (var i = start, j = 0; i < length; ++i, ++j) {
+			array[j] = args[i];
+		}
+		return array;
 	}
 
 	return Emitter;
